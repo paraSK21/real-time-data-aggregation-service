@@ -144,17 +144,6 @@ $env:PORT=4001; npm run dev
 - Empty data list: wait ~10–20 seconds; or change the default poll query in `src/index.ts` to something popular (`bonk`, `wif`, `sol`).
 - Windows quoting: wrap URLs with `?` or `&` in double quotes, e.g. `"http://...?...&..."`.
 
-## Submission (you push; commands below)
-```powershell
-cd C:\Users\kukre\Downloads\real-time-data-aggregation-service
-git init
-git add .
-git commit -m "feat: complete real-time aggregation service (REST+WS), caching, tests"
-git branch -M main
-git remote add origin <your_repo_url>
-git push -u origin main
-```
-
 ## Notes on design
 - HTTP client: Bottleneck for rate limiting; custom retry with exponential backoff
 - Data sources: DexScreener, GeckoTerminal (404s handled quietly), Jupiter
