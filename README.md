@@ -134,7 +134,7 @@ npm run lint
 Import `postman/collection.json` and run the requests.
 
 ## Troubleshooting
-- Port in use (`EADDRINUSE`): free the port or use another port temporarily
+- Port in use: free the port or use another port temporarily
 ```powershell
 # Free 4000
 taskkill /PID (netstat -ano | findstr :4000 | Select-String -Pattern "\d+$").Matches.Value /F
