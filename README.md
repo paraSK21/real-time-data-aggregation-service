@@ -142,7 +142,6 @@ taskkill /PID (netstat -ano | findstr :4000 | Select-String -Pattern "\d+$").Mat
 $env:PORT=4001; npm run dev
 ```
 - Empty data list: wait ~10–20 seconds; or change the default poll query in `src/index.ts` to something popular (`bonk`, `wif`, `sol`).
-- Windows quoting: wrap URLs with `?` or `&` in double quotes, e.g. `"http://...?...&..."`.
 
 ## Notes on design
 - HTTP client: Bottleneck for rate limiting; custom retry with exponential backoff
