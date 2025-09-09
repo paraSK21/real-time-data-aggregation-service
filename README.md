@@ -28,7 +28,6 @@ Aggregates real-time meme coin data from multiple DEX sources, exposes REST and 
 ## Prerequisites
 - Node.js 18+
 - Windows PowerShell or any terminal
-- Optional: Docker Desktop (if you want Redis)
 
 ## Quickstart (beginner-friendly)
 
@@ -70,32 +69,6 @@ curl "http://localhost:4000/api/tokens?limit=25&sort=volume&dir=desc"
 ```
 Note: It may return `{"data":[],"nextCursor":null}` for a few seconds right after startup. Wait ~10–20s and retry.
 
-### 5) Optional: WebSocket test (new terminal)
-```powershell
-Set-Content -Encoding UTF8 ws-test.js @'
-const { io } = require("socket.io-client");
-const s = io("http://localhost:4000");
-s.on("connected", (m) => console.log("connected", m));
-s.on("tokens:added", (d) => console.log("added", d.length));
-s.on("tokens:updated", (d) => console.log("updated", d.length));
-s.on("tokens:removed", (d) => console.log("removed", d.length));
-'@
-node .\ws-test.js
-```
-You’ll see events as the scheduler detects changes.
-
-### 6) Optional: Enable Redis caching
-- Start Redis via Docker:
-```powershell
-docker run --name redis-stack -p 6379:6379 -d redis/redis-stack-server:latest
-```
-- Point the app to Redis and restart the dev server:
-```powershell
-(Get-Content .env) -replace '^# REDIS_URL=.*','REDIS_URL=redis://localhost:6379' | Set-Content .env
-# Stop the server (Ctrl + C), then
-npm run dev
-```
-
 ## Changing the default poll query
 The scheduler uses a default query to build the working set. In `src/index.ts`:
 ```ts
@@ -129,9 +102,6 @@ All tests should pass (10+).
 npm run typecheck
 npm run lint
 ```
-
-## Postman
-Import `postman/collection.json` and run the requests.
 
 ## Troubleshooting
 - Port in use: free the port or use another port temporarily
