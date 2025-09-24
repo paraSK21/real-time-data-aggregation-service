@@ -10,7 +10,13 @@ function sleep(ms: number): Promise<void> {
 }
 
 export function createHttpClient(options?: { maxRps?: number; maxConcurrent?: number; retries?: number }): HttpClient {
-	const instance: AxiosInstance = axios.create({ timeout: 10_000 });
+    const instance: AxiosInstance = axios.create({
+        timeout: 10_000,
+        headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+            Accept: "application/json, text/plain, */*",
+        },
+    });
 
 	const limiter = new Bottleneck({
 		minTime: options?.maxRps ? Math.ceil(1000 / options.maxRps) : 0,

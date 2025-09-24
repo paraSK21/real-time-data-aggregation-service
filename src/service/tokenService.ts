@@ -31,11 +31,47 @@ export class TokenService {
 		const cached = await this.cache.get<UnifiedToken[]>(cacheKey);
 		if (cached) return cached;
 
-		const [a, b] = await Promise.all([
+		// Resilient fetch: tolerate one/both upstream failures
+		const results = await Promise.allSettled([
 			this.dexscreener.search(query),
 			this.geckoterminal.search(query),
 		]);
-		const merged = mergeTokens([...a, ...b]);
+		const a = results[0].status === "fulfilled" ? results[0].value : [];
+		const b = results[1].status === "fulfilled" ? results[1].value : [];
+		let merged = mergeTokens([...a, ...b]);
+
+		// Optional demo fallback to avoid empty UI when upstreams are blocked
+		if (merged.length === 0 && process.env.DEMO_MOCK_DATA === "true") {
+			merged = mergeTokens([
+				{
+					token_address: "So11111111111111111111111111111111111111112",
+					token_name: "Solana",
+					token_ticker: "SOL",
+					price_sol: 1,
+					market_cap_sol: 1000000,
+					volume_sol: 50000,
+					liquidity_sol: 250000,
+					transaction_count: 1000,
+					price_1hr_change: 0.5,
+					protocol: "demo",
+					source: "demo",
+				},
+				{
+					token_address: "Bonk111111111111111111111111111111111111111",
+					token_name: "Bonk",
+					token_ticker: "BONK",
+					price_sol: 0.000002,
+					market_cap_sol: 500000,
+					volume_sol: 150000,
+					liquidity_sol: 100000,
+					transaction_count: 5000,
+					price_1hr_change: -1.2,
+					protocol: "demo",
+					source: "demo",
+				},
+			]);
+		}
+
 		await this.cache.set(cacheKey, merged, this.config.cacheTtlSeconds);
 		return merged;
 	}

@@ -10,8 +10,33 @@ export class JupiterClient implements DataSourceClient {
 	}
 
 	async search(query: string): Promise<RawToken[]> {
-		// Jupiter price API is by id; for search, return empty and rely on other sources
-		return [];
+		try {
+			// Use Jupiter token list search
+			const url = `https://token.jup.ag/all`;
+			const list = await this.http.get<any[]>(url);
+			const needle = query.trim().toLowerCase();
+			const matched = (list || []).filter((t) => {
+				const name = String(t?.name ?? "").toLowerCase();
+				const symbol = String(t?.symbol ?? "").toLowerCase();
+				const address = String(t?.address ?? t?.mint ?? "").toLowerCase();
+				return name.includes(needle) || symbol.includes(needle) || address.includes(needle);
+			});
+			return matched.map((t) => ({
+				token_address: t?.address ?? t?.mint ?? "",
+				token_name: t?.name ?? undefined,
+				token_ticker: t?.symbol ?? undefined,
+				price_sol: undefined,
+				market_cap_sol: undefined,
+				volume_sol: undefined,
+				liquidity_sol: undefined,
+				transaction_count: undefined,
+				price_1hr_change: undefined,
+				protocol: undefined,
+				source: this.name,
+			}));
+		} catch {
+			return [];
+		}
 	}
 
 	async byTokenAddress(address: string): Promise<RawToken | null> {

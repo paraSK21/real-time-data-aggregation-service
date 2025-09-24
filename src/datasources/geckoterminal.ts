@@ -10,16 +10,30 @@ export class GeckoTerminalClient implements DataSourceClient {
 	}
 
 	async search(query: string): Promise<RawToken[]> {
-		try {
-			const url = `https://api.geckoterminal.com/api/v2/networks/solana/tokens?query=${encodeURIComponent(
-				query,
-			)}`;
-			const data = await this.http.get<any>(url);
-			const tokens: any[] = data?.data ?? [];
-			return tokens.map((t) => this.mapToken(t));
-		} catch {
-			return [];
+		// Try multiple popular networks to broaden coverage
+		const networks = [
+			"solana",
+			"ethereum",
+			"bsc",
+			"base",
+			"polygon",
+			"arbitrum",
+			"avalanche",
+			"optimism",
+		];
+		const results = await Promise.allSettled(
+			networks.map((n) =>
+				this.http
+					.get<any>(`https://api.geckoterminal.com/api/v2/networks/${n}/tokens?query=${encodeURIComponent(query)}`)
+					.then((data) => (data?.data ?? []).map((t: any) => this.mapToken(t)))
+					.catch(() => []),
+			),
+		);
+		const merged: RawToken[] = [];
+		for (const r of results) {
+			if (r.status === "fulfilled") merged.push(...r.value);
 		}
+		return merged;
 	}
 
 	async byTokenAddress(address: string): Promise<RawToken | null> {

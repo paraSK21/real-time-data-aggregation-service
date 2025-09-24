@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Real-time Tokens</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 16px; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+      h1 { font-size: 20px; margin: 0; }
+      .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      input, select, button { padding: 8px 10px; font-size: 14px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th, td { padding: 8px; border-bottom: 1px solid #4443; text-align: left; font-variant-numeric: tabular-nums; }
+      th { cursor: pointer; user-select: none; }
+      .status { font-size: 12px; opacity: 0.7; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Real-time Tokens</h1>
+      <div class="controls">
+        <input id="search" placeholder="Search (e.g. bonk)" />
+        <select id="sort">
+          <option value="volume">Sort: Volume</option>
+          <option value="price">Sort: Price</option>
+          <option value="liquidity">Sort: Liquidity</option>
+        </select>
+        <select id="dir">
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
+        </select>
+        <button id="refresh">Refresh</button>
+        <span class="status" id="ws-status">WS: connecting…</span>
+      </div>
+    </header>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Name</th>
+          <th data-key="price">Price</th>
+          <th data-key="volume">24h Volume</th>
+          <th data-key="liquidity">Liquidity</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="controls" style="margin-top:8px;">
+      <button id="loadMore">Load more</button>
+      <span class="status" id="count"></span>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const rowsEl = document.getElementById('rows');
+      const statusEl = document.getElementById('ws-status');
+      const searchEl = document.getElementById('search');
+      const sortEl = document.getElementById('sort');
+      const dirEl = document.getElementById('dir');
+      const refreshBtn = document.getElementById('refresh');
+      const loadMoreBtn = document.getElementById('loadMore');
+      const countEl = document.getElementById('count');
+      let nextCursor = null;
+      let totalCount = 0;
+
+      async function fetchTokens() {
+        const q = encodeURIComponent(searchEl.value || 'sol');
+        const sort = encodeURIComponent(sortEl.value);
+        const dir = encodeURIComponent(dirEl.value);
+        const res = await fetch(`/api/tokens?q=${q}&limit=100&sort=${sort}&dir=${dir}`);
+        const data = await res.json();
+        rowsEl.innerHTML = '';
+        renderRows(data.data || []);
+        nextCursor = data.nextCursor || null;
+        totalCount = (data.data || []).length;
+        updateCount();
+        loadMoreBtn.disabled = !nextCursor;
+      }
+
+      async function loadMore() {
+        if (!nextCursor) return;
+        const q = encodeURIComponent(searchEl.value || 'sol');
+        const res = await fetch(`/api/tokens?q=${q}&limit=100&cursor=${encodeURIComponent(nextCursor)}`);
+        const data = await res.json();
+        renderRows(data.data || []);
+        nextCursor = data.nextCursor || null;
+        totalCount += (data.data || []).length;
+        updateCount();
+        loadMoreBtn.disabled = !nextCursor;
+      }
+
+      function renderRows(tokens) {
+        for (const t of tokens) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${t.token_ticker ?? t.symbol ?? ''}</td>
+            <td>${t.token_name ?? t.name ?? ''}</td>
+            <td>${formatNumber(t.price_sol ?? t.price)}</td>
+            <td>${formatNumber(t.volume_sol ?? t.volume24h ?? t.volume)}</td>
+            <td>${formatNumber(t.liquidity_sol ?? t.liquidity)}</td>
+          `;
+          rowsEl.appendChild(tr);
+        }
+      }
+
+      function formatNumber(n) {
+        if (n == null || isNaN(Number(n))) return '';
+        const num = Number(n);
+        if (num === 0) return '0';
+        if (Math.abs(num) < 0.01) return num.toExponential(2);
+        return num.toLocaleString(undefined, { maximumFractionDigits: 6 });
+      }
+
+      // source/sources are intentionally not displayed in the UI
+
+      function updateCount() {
+        countEl.textContent = totalCount ? `${totalCount} shown` : '';
+      }
+
+      // Initial fetch and controls
+      fetchTokens();
+      refreshBtn.addEventListener('click', fetchTokens);
+      [searchEl, sortEl, dirEl].forEach(el => el.addEventListener('change', fetchTokens));
+      loadMoreBtn.addEventListener('click', loadMore);
+
+      // WebSocket updates (optional minimal listener)
+      try {
+        const socket = io({ transports: ['websocket'] });
+        socket.on('connect', () => statusEl.textContent = 'WS: connected');
+        socket.on('disconnect', () => statusEl.textContent = 'WS: disconnected');
+        socket.on('connected', () => {});
+        // If server publishes token updates via ws publisher, you could listen here.
+      } catch (e) {
+        statusEl.textContent = 'WS: error';
+      }
+    </script>
+  </body>
+  </html>
+
+

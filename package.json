@@ -8,7 +8,7 @@
   "scripts": {
     "build": "rimraf dist && tsc -p tsconfig.json",
     "dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only src/index.ts",
-    "start": "cross-env NODE_ENV=production node dist/index.js",
+  "start": "npm run build && cross-env NODE_ENV=production node dist/index.js",
     "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
